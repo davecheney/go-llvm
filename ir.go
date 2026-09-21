@@ -133,7 +133,6 @@ func llvmMetadataRefs(mds []Metadata) (*C.LLVMMetadataRef, C.unsigned) {
 
 const (
 	Ret         Opcode = C.LLVMRet
-	Br          Opcode = C.LLVMBr
 	Switch      Opcode = C.LLVMSwitch
 	IndirectBr  Opcode = C.LLVMIndirectBr
 	Invoke      Opcode = C.LLVMInvoke
