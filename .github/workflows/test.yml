@@ -55,6 +55,26 @@ jobs:
         if: matrix.llvm == 20
         run:
           go test -v
+  test-linux-dev:
+    # LLVM 24 is unreleased; apt.llvm.org publishes trunk snapshots in the
+    # unversioned llvm-toolchain-jammy repository.
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Install LLVM
+        run: |
+          echo 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy main' | sudo tee /etc/apt/sources.list.d/llvm.list
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends llvm-24-dev
+      - name: Test LLVM 24
+        run:
+          go test -v -tags=llvm24
   test-linux-fedora:
     # Fedora uses different paths than other systems, so testing it separately.
     runs-on: ubuntu-24.04

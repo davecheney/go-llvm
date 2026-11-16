@@ -17,6 +17,7 @@ package llvm
 #include "llvm-c/Comdat.h"
 #include "IRBindings.h"
 #include "deprecated.h"
+#include "backports.h"
 #include <stdlib.h>
 */
 import "C"
@@ -928,8 +929,8 @@ func (v Value) AggregateElement(idx int) (rv Value) {
 // Constant expressions
 func (v Value) Opcode() Opcode             { return Opcode(C.LLVMGetConstOpcode(v.C)) }
 func (v Value) InstructionOpcode() Opcode  { return Opcode(C.LLVMGetInstructionOpcode(v.C)) }
-func AlignOf(t Type) (v Value)             { v.C = C.LLVMAlignOf(t.C); return }
-func SizeOf(t Type) (v Value)              { v.C = C.LLVMSizeOf(t.C); return }
+func AlignOf(t Type) (v Value)             { v.C = C.LLVMAlignOf_wrap(t.C); return }
+func SizeOf(t Type) (v Value)              { v.C = C.LLVMSizeOf_wrap(t.C); return }
 func ConstNeg(v Value) (rv Value)          { rv.C = C.LLVMConstNeg(v.C); return }
 func ConstNSWNeg(v Value) (rv Value)       { rv.C = C.LLVMConstNSWNeg(v.C); return }
 func ConstNot(v Value) (rv Value)          { rv.C = C.LLVMConstNot(v.C); return }
@@ -943,12 +944,12 @@ func ConstXor(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstXor(lhs.C, rhs.C);
 
 func ConstGEP(t Type, v Value, indices []Value) (rv Value) {
 	ptr, nvals := llvmValueRefs(indices)
-	rv.C = C.LLVMConstGEP2(t.C, v.C, ptr, nvals)
+	rv.C = C.LLVMConstGEP2_wrap(t.C, v.C, ptr, nvals)
 	return
 }
 func ConstInBoundsGEP(t Type, v Value, indices []Value) (rv Value) {
 	ptr, nvals := llvmValueRefs(indices)
-	rv.C = C.LLVMConstInBoundsGEP2(t.C, v.C, ptr, nvals)
+	rv.C = C.LLVMConstInBoundsGEP2_wrap(t.C, v.C, ptr, nvals)
 	return
 }
 func ConstTrunc(v Value, t Type) (rv Value)    { rv.C = C.LLVMConstTrunc(v.C, t.C); return }
@@ -1363,7 +1364,17 @@ func (v Value) AllocatedType() (t Type) { t.C = C.LLVMGetAllocatedType(v.C); ret
 // An instruction builder represents a point within a basic block, and is the
 // exclusive means of building instructions using the C interface.
 
-func (c Context) NewBuilder() (b Builder) { b.C = C.LLVMCreateBuilderInContext(c.C); return }
+// NewBuilder returns a builder that is not tied to a module.
+//
+// Starting with LLVM 24, a builder created this way must be positioned with
+// SetInsertPoint, SetInsertPointAtEnd or similar before it is used for
+// anything else, including setting the debug location. Use Module.NewBuilder
+// to get a builder that can be used immediately.
+func (c Context) NewBuilder() (b Builder) { b.C = C.LLVMCreateBuilderInContext_wrap(c.C); return }
+
+// NewBuilder returns a builder for instructions in m. Unlike
+// Context.NewBuilder, it can be used before an insertion point is set.
+func (m Module) NewBuilder() (b Builder) { b.C = C.LLVMGoCreateBuilderForModule(m.C); return }
 func (b Builder) SetInsertPoint(block BasicBlock, instr Value) {
 	C.LLVMPositionBuilder(b.C, block.C, instr.C)
 }

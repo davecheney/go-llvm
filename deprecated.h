@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file wraps LLVMGetGlobalContext, which was deprecated in LLVM 22 but
-// has no non-deprecated replacement. All other wrapped functions are
-// handled by calling their context-aware counterparts from Go.
+// This file wraps LLVM C API functions that are deprecated in newer LLVM
+// releases but whose replacements are not available in every LLVM version
+// these bindings support:
+//
+//   - LLVMGetGlobalContext, deprecated in LLVM 22 with no replacement.
+//   - LLVMAlignOf, LLVMSizeOf, LLVMConstGEP2, LLVMConstInBoundsGEP2 and
+//     LLVMCreateBuilderInContext, deprecated in LLVM 24.
+//
+// Other deprecated functions are handled by calling their context-aware
+// counterparts from Go.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,6 +29,16 @@ extern "C" {
 #endif
 
 LLVMContextRef LLVMGetGlobalContext_wrap(void);
+LLVMValueRef LLVMAlignOf_wrap(LLVMTypeRef Ty);
+LLVMValueRef LLVMSizeOf_wrap(LLVMTypeRef Ty);
+LLVMValueRef LLVMConstGEP2_wrap(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
+                                LLVMValueRef *ConstantIndices,
+                                unsigned NumIndices);
+LLVMValueRef LLVMConstInBoundsGEP2_wrap(LLVMTypeRef Ty,
+                                        LLVMValueRef ConstantVal,
+                                        LLVMValueRef *ConstantIndices,
+                                        unsigned NumIndices);
+LLVMBuilderRef LLVMCreateBuilderInContext_wrap(LLVMContextRef C);
 
 #ifdef __cplusplus
 }

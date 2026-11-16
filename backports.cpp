@@ -1,5 +1,6 @@
 
 #include "backports.h"
+#include "llvm-c/Core.h"
 #include "llvm/IR/Instructions.h"
 #if LLVM_VERSION_MAJOR >= 16
 #include "llvm/IR/PassManager.h"
@@ -36,7 +37,12 @@ LLVMMemoryBufferRef LLVMGoWriteThinLTOBitcodeToMemoryBuffer(LLVMModuleRef M) {
   llvm::FunctionAnalysisManager FAM;
   llvm::CGSCCAnalysisManager CGAM;
   llvm::ModuleAnalysisManager MAM;
+#if LLVM_VERSION_MAJOR >= 24
+  // LLVM 24 PassBuilder reads its library options from an LLVMContext.
+  llvm::PassBuilder PB(llvm::unwrap(M)->getContext());
+#else
   llvm::PassBuilder PB;
+#endif
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -56,6 +62,17 @@ LLVMMemoryBufferRef LLVMGoWriteThinLTOBitcodeToMemoryBuffer(LLVMModuleRef M) {
   PM.run(*llvm::unwrap(M));
 #endif
   return llvm::wrap(llvm::MemoryBuffer::getMemBufferCopy(OS.str()).release());
+}
+
+// LLVM 24 delays creating the IRBuilder behind LLVMCreateBuilderInContext
+// until the builder is positioned, and aborts if it is used before then.
+// LLVMCreateBuilderForModule avoids that; emulate it on older versions.
+LLVMBuilderRef LLVMGoCreateBuilderForModule(LLVMModuleRef M) {
+#if LLVM_VERSION_MAJOR >= 24
+  return LLVMCreateBuilderForModule(M);
+#else
+  return LLVMCreateBuilderInContext(LLVMGetModuleContext(M));
+#endif
 }
 
 void LLVMGoDIBuilderInsertDbgValueRecordAtEnd(
