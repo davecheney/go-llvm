@@ -19,6 +19,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm-c/Core.h"
 #include "llvm-c/DebugInfo.h"
 
 void LLVMGlobalObjectAddMetadata(LLVMValueRef Global, unsigned KindID, LLVMMetadataRef MD) {
@@ -83,4 +84,22 @@ LLVMBool LLVMGoLinkerLinkModule(LLVMGoLinkerRef L, LLVMModuleRef Src) {
 
 void LLVMGoDisposeLinker(LLVMGoLinkerRef L) {
   delete reinterpret_cast<llvm::Linker *>(L);
+}
+
+// LLVM 24 deprecates LLVMConstGEP2 and LLVMConstInBoundsGEP2. LLVM 19 adds
+// LLVMConstGEPWithNoWrapFlags.
+LLVMValueRef LLVMGoConstPtrAdd(LLVMValueRef Ptr, LLVMValueRef Offset,
+                               unsigned NoWrapFlags) {
+#if LLVM_VERSION_MAJOR >= 24
+  return LLVMConstPtrAdd(Ptr, Offset, NoWrapFlags);
+#else
+  LLVMTypeRef I8 = LLVMInt8TypeInContext(LLVMGetTypeContext(LLVMTypeOf(Ptr)));
+#if LLVM_VERSION_MAJOR >= 19
+  return LLVMConstGEPWithNoWrapFlags(I8, Ptr, &Offset, 1, NoWrapFlags);
+#else
+  if (NoWrapFlags & 1)
+    return LLVMConstInBoundsGEP2(I8, Ptr, &Offset, 1);
+  return LLVMConstGEP2(I8, Ptr, &Offset, 1);
+#endif
+#endif
 }

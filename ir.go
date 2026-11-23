@@ -16,6 +16,7 @@ package llvm
 #include "llvm-c/Core.h"
 #include "llvm-c/Comdat.h"
 #include "IRBindings.h"
+#include "backports.h"
 #include "deprecated.h"
 #include <stdlib.h>
 */
@@ -970,6 +971,22 @@ func ConstGEP(t Type, v Value, indices []Value) (rv Value) {
 func ConstInBoundsGEP(t Type, v Value, indices []Value) (rv Value) {
 	ptr, nvals := llvmValueRefs(indices)
 	rv.C = C.LLVMConstInBoundsGEP2(t.C, v.C, ptr, nvals)
+	return
+}
+
+// GEPNoWrapFlags are the no-wrap flags of a getelementptr.
+type GEPNoWrapFlags uint32
+
+// The values are the same as LLVMGEPNoWrapFlags in llvm-c/Core.h.
+const (
+	GEPFlagInBounds GEPNoWrapFlags = 1 << 0
+	GEPFlagNUSW     GEPNoWrapFlags = 1 << 1
+	GEPFlagNUW      GEPNoWrapFlags = 1 << 2
+)
+
+// ConstPtrAdd returns a constant getelementptr i8 that adds offset bytes to v.
+func ConstPtrAdd(v, offset Value, flags GEPNoWrapFlags) (rv Value) {
+	rv.C = C.LLVMGoConstPtrAdd(v.C, offset.C, C.unsigned(flags))
 	return
 }
 func ConstTrunc(v Value, t Type) (rv Value)    { rv.C = C.LLVMConstTrunc(v.C, t.C); return }

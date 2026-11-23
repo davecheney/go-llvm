@@ -354,3 +354,29 @@ func TestConstDataArray(t *testing.T) {
 		t.Errorf("all zero data: got %s, want zeroinitializer", zero.String())
 	}
 }
+
+func TestConstPtrAdd(t *testing.T) {
+	ctx := NewContext()
+	defer ctx.Dispose()
+	mod := ctx.NewModule("")
+	defer mod.Dispose()
+	i32 := ctx.Int32Type()
+	g := AddGlobal(mod, ArrayType(i32, 4), "g")
+
+	for _, test := range []struct {
+		offset uint64
+		flags  GEPNoWrapFlags
+		want   string
+	}{
+		{8, 0, "ptr getelementptr (i8, ptr @g, i32 8)"},
+		{8, GEPFlagInBounds, "ptr getelementptr inbounds (i8, ptr @g, i32 8)"},
+	} {
+		got := ConstPtrAdd(g, ConstInt(i32, test.offset, false), test.flags)
+		if got.String() != test.want {
+			t.Errorf("ConstPtrAdd(@g, %d, %d) = %s, want %s", test.offset, test.flags, got.String(), test.want)
+		}
+	}
+	if got := ConstPtrAdd(g, ConstInt(i32, 0, false), GEPFlagInBounds); got != g {
+		t.Errorf("ConstPtrAdd(@g, 0) = %s, want @g", got.String())
+	}
+}
